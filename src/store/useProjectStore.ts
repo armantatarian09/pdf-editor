@@ -83,7 +83,8 @@ export const useProjectStore = create<ProjectStore>()(
       set((state) => {
         const pagesMeta: PageMeta[] = Array.from({ length: pageCount }, (_, index) => ({
           id: crypto.randomUUID(),
-          rotation: 0
+          rotation: 0,
+          sourceIndex: index
         }));
         const present: Project = {
           ...state.present,
@@ -176,9 +177,11 @@ export const useProjectStore = create<ProjectStore>()(
     duplicatePage: (pageIndex) =>
       set((state) => {
         const pagesMeta = [...state.present.pagesMeta];
+        const sourceIndex = pagesMeta[pageIndex]?.sourceIndex ?? pageIndex;
         pagesMeta.splice(pageIndex + 1, 0, {
           id: crypto.randomUUID(),
-          rotation: pagesMeta[pageIndex]?.rotation ?? 0
+          rotation: pagesMeta[pageIndex]?.rotation ?? 0,
+          sourceIndex
         });
         const opsByPage: Project["opsByPage"] = {};
         pagesMeta.forEach((_, index) => {
@@ -200,7 +203,11 @@ export const useProjectStore = create<ProjectStore>()(
       set((state) => {
         const pagesMeta = [...state.present.pagesMeta];
         for (let i = 0; i < addedPages; i += 1) {
-          pagesMeta.push({ id: crypto.randomUUID(), rotation: 0 });
+          pagesMeta.push({
+            id: crypto.randomUUID(),
+            rotation: 0,
+            sourceIndex: state.present.pageCount + i
+          });
         }
         return pushHistory(state, {
           ...state.present,

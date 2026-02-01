@@ -21,12 +21,22 @@ const createBaseOp = (pageIndex: number, type: Op["type"]) => ({
 type PdfPageProps = {
   pdfDoc: Awaited<ReturnType<typeof getDocument>>;
   pageIndex: number;
+  sourceIndex: number;
+  rotation: number;
   zoom: number;
   isActive: boolean;
   onActivate: () => void;
 };
 
-const PdfPage = ({ pdfDoc, pageIndex, zoom, isActive, onActivate }: PdfPageProps) => {
+const PdfPage = ({
+  pdfDoc,
+  pageIndex,
+  sourceIndex,
+  rotation,
+  zoom,
+  isActive,
+  onActivate
+}: PdfPageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewport, setViewport] = useState<{ width: number; height: number; scale: number } | null>(
     null
@@ -50,8 +60,7 @@ const PdfPage = ({ pdfDoc, pageIndex, zoom, isActive, onActivate }: PdfPageProps
 
   useEffect(() => {
     const renderPage = async () => {
-      const page = await pdfDoc.getPage(pageIndex + 1);
-      const rotation = useProjectStore.getState().present.pagesMeta[pageIndex]?.rotation ?? 0;
+      const page = await pdfDoc.getPage(sourceIndex + 1);
       const nextViewport = page.getViewport({ scale: zoom, rotation });
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -67,7 +76,7 @@ const PdfPage = ({ pdfDoc, pageIndex, zoom, isActive, onActivate }: PdfPageProps
       });
     };
     renderPage();
-  }, [pageIndex, pdfDoc, zoom]);
+  }, [pageIndex, pdfDoc, rotation, sourceIndex, zoom]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!viewport) return;

@@ -61,6 +61,15 @@ const App = () => {
     saveProject(project);
   }, [project]);
 
+  useEffect(() => {
+    const refreshDoc = async () => {
+      if (!project.pdfBytes) return;
+      const doc = await getDocument({ data: project.pdfBytes }).promise;
+      setPdfDoc(doc);
+    };
+    refreshDoc();
+  }, [project.pdfBytes]);
+
   const handleFile = async (file: File) => {
     if (file.size > 50 * 1024 * 1024) {
       alert("Large file detected. Performance may be impacted.");
@@ -76,7 +85,7 @@ const App = () => {
     const bytes = await exportPdf(
       project.pdfBytes,
       project.opsByPage,
-      project.pagesMeta.map((page) => page.rotation)
+      project.pagesMeta
     );
     const blob = new Blob([bytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
@@ -87,10 +96,7 @@ const App = () => {
     URL.revokeObjectURL(url);
   };
 
-  const pages = useMemo(
-    () => project.pagesMeta.map((_, index) => index),
-    [project.pagesMeta]
-  );
+  const pages = useMemo(() => project.pagesMeta, [project.pagesMeta]);
 
   return (
     <div>
@@ -107,11 +113,13 @@ const App = () => {
           }}
         >
           {pdfDoc ? (
-            pages.map((pageIndex) => (
+            pages.map((pageMeta, pageIndex) => (
               <PdfPage
-                key={project.pagesMeta[pageIndex]?.id ?? pageIndex}
+                key={pageMeta.id ?? pageIndex}
                 pdfDoc={pdfDoc}
                 pageIndex={pageIndex}
+                sourceIndex={pageMeta.sourceIndex}
+                rotation={pageMeta.rotation}
                 zoom={zoom}
                 isActive={activePageIndex === pageIndex}
                 onActivate={() => setActivePageIndex(pageIndex)}

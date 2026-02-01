@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { Op } from "../types/pdf";
+import { Op, PageMeta } from "../types/pdf";
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace("#", "");
@@ -12,13 +12,20 @@ const hexToRgb = (hex: string) => {
 export const exportPdf = async (
   bytes: Uint8Array,
   opsByPage: Record<number, Op[]>,
-  rotations: number[]
+  pagesMeta: PageMeta[]
 ) => {
-  const pdfDoc = await PDFDocument.load(bytes);
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const sourceDoc = await PDFDocument.load(bytes);
+  const outputDoc = await PDFDocument.create();
+  const copiedPages = await outputDoc.copyPages(
+    sourceDoc,
+    pagesMeta.map((page) => page.sourceIndex)
+  );
+  copiedPages.forEach((page) => outputDoc.addPage(page));
 
-  pdfDoc.getPages().forEach((page, index) => {
-    const rotation = rotations[index] ?? 0;
+  const font = await outputDoc.embedFont(StandardFonts.Helvetica);
+
+  outputDoc.getPages().forEach((page, index) => {
+    const rotation = pagesMeta[index]?.rotation ?? 0;
     if (rotation !== 0) {
       page.setRotation({ type: "degrees", angle: rotation });
     }
@@ -103,14 +110,14 @@ export const exportPdf = async (
   });
 
   for (const [pageIndex, ops] of Object.entries(opsByPage)) {
-    const page = pdfDoc.getPages()[Number(pageIndex)];
+    const page = outputDoc.getPages()[Number(pageIndex)];
     for (const op of ops) {
       if (op.type === "image" || op.type === "signature") {
         const data = op.src.split(",")[1];
         const isPng = op.src.startsWith("data:image/png");
         const image = isPng
-          ? await pdfDoc.embedPng(data)
-          : await pdfDoc.embedJpg(data);
+          ? await outputDoc.embedPng(data)
+          : await outputDoc.embedJpg(data);
         page.drawImage(image, {
           x: op.x,
           y: op.y,
@@ -121,5 +128,5 @@ export const exportPdf = async (
     }
   }
 
-  return pdfDoc.save();
+  return outputDoc.save();
 };

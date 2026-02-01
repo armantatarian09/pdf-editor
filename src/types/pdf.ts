@@ -99,6 +99,7 @@ export type Op =
 export type PageMeta = {
   id: string;
   rotation: number;
+  sourceIndex: number;
 };
 
 export type Project = {
